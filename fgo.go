@@ -73,7 +73,7 @@ func Pipe[T any, M any, R any](xs []T, fs ...interface{}) ([]M, R, error) {
 			case reduceStruct[R, T]: // reduce
 				{
 					count++
-					fmt.Printf("REDUCE (original): '%v'\n", x)
+					//fmt.Printf("REDUCE (original): '%v'\n", x)
 					if count > 1 {
 						f2.initial = j
 					}
@@ -83,7 +83,7 @@ func Pipe[T any, M any, R any](xs []T, fs ...interface{}) ([]M, R, error) {
 			case reduceStruct[R, M]: // reduce
 				{
 					count++
-					fmt.Printf("REDUCE (mapped): '%v'\n", m)
+					//fmt.Printf("REDUCE (mapped): '%v'\n", m)
 					//f2.initial = j
 					if count > 1 {
 						f2.initial = j
