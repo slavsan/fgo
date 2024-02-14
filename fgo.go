@@ -38,10 +38,6 @@ func Pipe[T any, M any, R any](xs []T, fs ...interface{}) ([]M, R, error) {
 		for _, f := range fs {
 			// TODO: on first iteration, check the order of functions is valid, i.e. if reduce is defined, it should be last
 			switch f2 := f.(type) {
-			//case func(T) K:
-			//	{
-			//		x = f2(x)
-			//	}
 			case func(T) bool: // filter
 				{
 					if !f2(x) {
@@ -56,45 +52,30 @@ func Pipe[T any, M any, R any](xs []T, fs ...interface{}) ([]M, R, error) {
 				}
 			case func(T) T: // map
 				{
-					//fmt.Printf("-----\n")
-					//fmt.Printf("ORIGINAL 1: '%v'\n", x)
 					x = f2(x)
-					//fmt.Printf("MAPPED 1: '%v'\n", x)
-					//fmt.Printf("-----\n")
 					if v, ok := any(x).(M); ok {
 						m = v
 					}
 				}
 			case func(T) M: // map
 				{
-					//fmt.Printf("-----\n")
-					//fmt.Printf("ORIGINAL 2: '%v'\n", x)
 					m = f2(x)
-					//fmt.Printf("MAPPED 2: '%v'\n", m)
-					//fmt.Printf("-----\n")
 				}
-			case reduceStruct[R, T]: // reduce
+			case Reducer[R, T]: // reduce
 				{
 					count++
-					//fmt.Printf("REDUCE (original): '%v'\n", x)
 					if count == 1 {
 						j = f2.initial
-						//f2.initial = j
 					}
 					j = f2.reduce(j, x)
-					//j = f2.initial
 				}
-			case reduceStruct[R, M]: // reduce
+			case Reducer[R, M]: // reduce
 				{
 					count++
-					//fmt.Printf("REDUCE (mapped): '%v'\n", m)
-					//f2.initial = j
 					if count == 1 {
 						j = f2.initial
-						//f2.initial = j
 					}
 					j = f2.reduce(j, m)
-					//j = f2.initial
 				}
 			case func() int: // take
 				{
@@ -103,7 +84,6 @@ func Pipe[T any, M any, R any](xs []T, fs ...interface{}) ([]M, R, error) {
 						ys = append(ys, m)
 						goto exit
 					}
-					//f2.reduce(f2.initial, x)
 				}
 			default:
 				return ys, j, fmt.Errorf("invalid function: %s", reflect.TypeOf(f))
@@ -116,13 +96,13 @@ exit:
 	return ys, j, nil
 }
 
-type reduceStruct[K any, T any] struct {
+type Reducer[K any, T any] struct {
 	initial K
 	reduce  func(acc K, item T) K
 }
 
-func Reduce[T any, K any](initial K, f func(acc K, item T) K) reduceStruct[K, T] {
-	return reduceStruct[K, T]{
+func Reduce[T any, K any](initial K, f func(acc K, item T) K) Reducer[K, T] {
+	return Reducer[K, T]{
 		initial: initial,
 		reduce:  f,
 	}

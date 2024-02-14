@@ -290,7 +290,6 @@ func TestFilterMapReduce(t *testing.T) {
 					tc.input,
 					f.Filter[string](func(s string) bool { return len(s) > 3 }),
 					f.Map[string, string](func(s string) string { return fmt.Sprintf("%s %d", s, len(s)) }),
-					//f.Take(3),
 					f.Reduce[string, *strings.Builder](&strings.Builder{}, func(sb *strings.Builder, s string) *strings.Builder {
 						sb.WriteString(s)
 						sb.WriteString(" ")
@@ -329,7 +328,6 @@ func TestMapFilterReduce(t *testing.T) {
 					tc.input,
 					f.Map[string, string](func(s string) string { return fmt.Sprintf("%s %d", s, len(s)) }),
 					f.Filter[string](func(s string) bool { return strings.HasSuffix(s, "3") }),
-					//f.Take(3),
 					f.Reduce[string, *strings.Builder](&strings.Builder{}, func(sb *strings.Builder, s string) *strings.Builder {
 						sb.WriteString(s)
 						sb.WriteString(" ")
@@ -372,7 +370,6 @@ func TestFilterStringMapToIntegerThenReduce(t *testing.T) {
 					tc.input,
 					f.Filter[string](func(s string) bool { return len(s) == 4 }),
 					f.Map[string, int](func(s string) int { return len(s) }),
-					//f.Take(3),
 					f.Reduce[int, sum](sum{}, func(acc sum, i int) sum {
 						acc.value += i
 						return acc
@@ -382,6 +379,45 @@ func TestFilterStringMapToIntegerThenReduce(t *testing.T) {
 			assert.Nil(t, err)
 			assert.Equal(t, tc.expected, result)
 			assert.Equal(t, tc.reducedTo, reducedTo)
+		})
+	}
+}
+
+func TestFilterTakeStrings(t *testing.T) {
+	testCases := []struct {
+		title     string
+		input     []string
+		expected  []string
+		predicate func(string) bool
+		only      int
+	}{
+		{
+			title:     "can filter out elements with length bigger than 3",
+			input:     []string{"foo", "bar", "spam", "eggs", "baz"},
+			predicate: func(s string) bool { return len(s) > 3 },
+			only:      1,
+			expected:  []string{"spam"},
+		},
+		{
+			title:     "can filter out elements with length bigger smaller than 4",
+			input:     []string{"foo", "bar", "spam", "eggs", "baz"},
+			predicate: func(s string) bool { return len(s) < 4 },
+			only:      4,
+			expected:  []string{"foo", "bar", "baz"},
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.title, func(t *testing.T) {
+			result, _, err :=
+				f.Pipe[string, string, *strings.Builder](
+					tc.input,
+					f.Filter[string](tc.predicate),
+					f.Take(tc.only),
+				)
+
+			assert.Nil(t, err)
+			assert.Equal(t, tc.expected, result)
 		})
 	}
 }
