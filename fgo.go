@@ -23,6 +23,24 @@ func Take(num int) func() int {
 	}
 }
 
+type UniqueReducer[T any] struct {
+	//uniqueValues map[string]T
+	uniqueValues map[string]struct{}
+	by           func(T) string
+}
+
+func (u UniqueReducer[T]) OrError(err error) UniqueReducer[T] {
+	return u
+}
+
+func Unique[T any](f func(T) string) UniqueReducer[T] {
+	return UniqueReducer[T]{
+		//uniqueValues: make(map[string]T),
+		uniqueValues: make(map[string]struct{}),
+		by:           f,
+	}
+}
+
 func Pipe[T any, M any, R any](xs []T, fs ...interface{}) ([]M, R, error) {
 	var (
 		ys    = make([]M, 0, len(xs))
@@ -76,6 +94,22 @@ func Pipe[T any, M any, R any](xs []T, fs ...interface{}) ([]M, R, error) {
 						j = f2.initial
 					}
 					j = f2.reduce(j, m)
+				}
+			case UniqueReducer[T]: // unique
+				{
+					key := f2.by(x)
+					if _, ok := f2.uniqueValues[key]; ok {
+						goto skip
+					}
+					f2.uniqueValues[key] = struct{}{}
+				}
+			case UniqueReducer[M]: // unique
+				{
+					key := f2.by(m)
+					if _, ok := f2.uniqueValues[key]; ok {
+						goto skip
+					}
+					f2.uniqueValues[key] = struct{}{}
 				}
 			case func() int: // take
 				{

@@ -421,3 +421,68 @@ func TestFilterTakeStrings(t *testing.T) {
 		})
 	}
 }
+
+func TestFilterUniqueStrings(t *testing.T) {
+	testCases := []struct {
+		title     string
+		input     []string
+		expected  []string
+		predicate func(string) bool
+		unique    func(string) string
+	}{
+		{
+			title:     "can filter out elements with length bigger than 3",
+			input:     []string{"eggs", "foo", "spam", "bar", "spam", "eggs", "spam", "baz"},
+			predicate: func(s string) bool { return len(s) > 3 },
+			unique:    func(s string) string { return s },
+			expected:  []string{"eggs", "spam"},
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.title, func(t *testing.T) {
+			result, _, err :=
+				f.Pipe[string, string, *strings.Builder](
+					tc.input,
+					f.Filter[string](tc.predicate),
+					f.Unique(tc.unique),
+				)
+
+			assert.Nil(t, err)
+			assert.Equal(t, tc.expected, result)
+		})
+	}
+}
+
+func TestFilterMapUnique(t *testing.T) {
+	testCases := []struct {
+		title     string
+		input     []string
+		expected  []int
+		transform func(i int) string
+		unique    func(int) string
+		predicate func(i string) bool
+	}{
+		{
+			title:    "with strings builder as reducer",
+			input:    []string{"foo", "bar", "yo", "spam", "eggs", "baz"},
+			unique:   func(i int) string { return strconv.Itoa(i) },
+			expected: []int{3, 4},
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.title, func(t *testing.T) {
+			result, _, err :=
+				f.Pipe[string, int, *strings.Builder](
+					tc.input,
+					f.Filter[string](func(s string) bool { return len(s) > 2 }),
+					f.Map[string, int](func(s string) int { return len(s) }),
+					f.Unique[int](tc.unique),
+				)
+
+			assert.Nil(t, err)
+			assert.Equal(t, tc.expected, result)
+		})
+	}
+}
