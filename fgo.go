@@ -24,14 +24,17 @@ func Take(num int) func() int {
 }
 
 func Pipe[T any, M any, R any](xs []T, fs ...interface{}) ([]M, R, error) {
-	ys := make([]M, 0, len(xs))
-	var j R
-	var count int
+	var (
+		ys    = make([]M, 0, len(xs))
+		j     R
+		count int
+	)
 	for i, x := range xs {
 		var m M
 		if v, ok := any(x).(M); ok {
 			m = v
 		}
+
 		for _, f := range fs {
 			// TODO: on first iteration, check the order of functions is valid, i.e. if reduce is defined, it should be last
 			switch f2 := f.(type) {
@@ -74,22 +77,24 @@ func Pipe[T any, M any, R any](xs []T, fs ...interface{}) ([]M, R, error) {
 				{
 					count++
 					//fmt.Printf("REDUCE (original): '%v'\n", x)
-					if count > 1 {
-						f2.initial = j
+					if count == 1 {
+						j = f2.initial
+						//f2.initial = j
 					}
-					f2.initial = f2.reduce(f2.initial, x)
-					j = f2.initial
+					j = f2.reduce(j, x)
+					//j = f2.initial
 				}
 			case reduceStruct[R, M]: // reduce
 				{
 					count++
 					//fmt.Printf("REDUCE (mapped): '%v'\n", m)
 					//f2.initial = j
-					if count > 1 {
-						f2.initial = j
+					if count == 1 {
+						j = f2.initial
+						//f2.initial = j
 					}
-					f2.initial = f2.reduce(f2.initial, m)
-					j = f2.initial
+					j = f2.reduce(j, m)
+					//j = f2.initial
 				}
 			case func() int: // take
 				{
